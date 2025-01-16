@@ -24,7 +24,7 @@ const detail = 12;
 const loader = new THREE.TextureLoader();
 const geometry = new THREE.IcosahedronGeometry(1, detail);
 const material = new THREE.MeshPhongMaterial({
-  map: loader.load(".00_earthmap1k.jpg"),
+  loader.load(".00_earthmap1k.jpg"),
   specularMap: loader.load("02_earthspec1k.jpg"),
   bumpMap: loader.load("01_earthbump1k.jpg"),
   bumpScale: 0.04,
