@@ -1,8 +1,7 @@
 import * as THREE from "three";
+import getBgSphere from "./getBgSphere.js";
 import { OrbitControls } from 'jsm/controls/OrbitControls.js';
-
-import getStarfield from "getStarfield.js";
-import { getFresnelMat } from "getFresnelMat.js";
+import { TeapotGeometry } from 'jsm/geometries/TeapotGeometry.js';
 
 const w = window.innerWidth;
 const h = window.innerHeight;
@@ -12,67 +11,71 @@ camera.position.z = 5;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(w, h);
 document.body.appendChild(renderer.domElement);
-// THREE.ColorManagement.enabled = true;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 
-const earthGroup = new THREE.Group();
-earthGroup.rotation.z = -23.4 * Math.PI / 180;
-scene.add(earthGroup);
-new OrbitControls(camera, renderer.domElement);
-const detail = 12;
-const loader = new THREE.TextureLoader();
-const geometry = new THREE.IcosahedronGeometry(1, detail);
-const material = new THREE.MeshPhongMaterial({
-  loader.load(".00_earthmap1k.jpg"),
-  specularMap: loader.load("02_earthspec1k.jpg"),
-  bumpMap: loader.load("01_earthbump1k.jpg"),
-  bumpScale: 0.04,
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+const texLoader = new THREE.TextureLoader();
+const path = './assets/textures/matcap/';
+
+function setTextureRepeatAndWrap (tex) {
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(6, 1);
+}
+
+const colorMap = texLoader.load(`${path}baseColor.png`, (tex) => {
+  setTextureRepeatAndWrap(tex);
 });
-// material.map.colorSpace = THREE.SRGBColorSpace;
-const earthMesh = new THREE.Mesh(geometry, material);
-earthGroup.add(earthMesh);
-
-const lightsMat = new THREE.MeshBasicMaterial({
-  map: loader.load("03_earthlights1k.jpg"),
-  blending: THREE.AdditiveBlending,
+const normalMap = texLoader.load(`${path}normal.png`, (tex) => {
+  setTextureRepeatAndWrap(tex);
 });
-const lightsMesh = new THREE.Mesh(geometry, lightsMat);
-earthGroup.add(lightsMesh);
-
-const cloudsMat = new THREE.MeshStandardMaterial({
- loader.load("04_earthcloudmap.jpg"),
-  transparent: true,
-  opacity: 0.8,
-  blending: THREE.AdditiveBlending,
-  alphaMap: loader.load('05_earthcloudmaptrans.jpg'),
-  // alphaTest: 0.3,
+const roughnessMap = texLoader.load(`${path}roughness.png`, (tex) => {
+  setTextureRepeatAndWrap(tex);
 });
-const cloudsMesh = new THREE.Mesh(geometry, cloudsMat);
-cloudsMesh.scale.setScalar(1.003);
-earthGroup.add(cloudsMesh);
 
-const fresnelMat = getFresnelMat();
-const glowMesh = new THREE.Mesh(geometry, fresnelMat);
-glowMesh.scale.setScalar(1.01);
-earthGroup.add(glowMesh);
+// const geometry = new TeapotGeometry(1);
+const geometry = new THREE.TorusKnotGeometry(1, 0.4, 256, 32);
+// const material = new THREE.MeshStandardMaterial({
+//   map: colorMap,
+//   // normalScale: new THREE.Vector2(6, 6),
+  // normalMap,
+//   metalness: 0.5,
+//   // roughness: 0,
+//   roughnessMap,
+//   // wireframe: true
+//   side: THREE.DoubleSide
+// });
+const material = new THREE.MeshMatcapMaterial({
+  // normalMap,
+  // normalScale: new THREE.Vector2(2, 2),
+  matcap: texLoader.load(`${path}wax.png`),
+});
+console.log(material);
+const mesh = new THREE.Mesh(geometry, material);
+scene.add(mesh);
 
-const stars = getStarfield({numStars: 2000});
-scene.add(stars);
+// lights
+// const sunlight = new THREE.DirectionalLight(0xFFFFFF, 2);
+// sunlight.position.set(2, 2, 2);
+// scene.add(sunlight);
 
-const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
-sunLight.position.set(-2, 0.5, 1.5);
-scene.add(sunLight);
+// const fillColor = new THREE.Color().setHSL(0.1, 0.5, 0.5);
+// const filllight = new THREE.DirectionalLight(fillColor, 1);
+// filllight.position.set(-2, -2 , -2);
+// scene.add(filllight);
+
+// const hemiLight = new THREE.HemisphereLight(0xB1E1FF, 0xB97A20, 1);
+// scene.add(hemiLight);
+
+const gradientBackground = getBgSphere({ lightnessMult: 0.005});
+scene.add(gradientBackground);
 
 function animate() {
   requestAnimationFrame(animate);
-
-  earthMesh.rotation.y += 0.002;
-  lightsMesh.rotation.y += 0.002;
-  cloudsMesh.rotation.y += 0.0023;
-  glowMesh.rotation.y += 0.002;
-  stars.rotation.y -= 0.0002;
+  mesh.rotation.x += 0.002;
+  mesh.rotation.y += 0.005;
   renderer.render(scene, camera);
+  controls.update();
 }
 
 animate();
